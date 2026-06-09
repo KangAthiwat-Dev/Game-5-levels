@@ -123,7 +123,52 @@ const EMOJIS={start:'🐻',end:'🎁',obstacle:'🪨',water:'💧',grass:'',ice:
 const CMD_ICONS={down:'⬇',up:'⬆',left:'⬅',right:'➡'};
 const CMD_LABELS={down:'ลง',up:'ขึ้น',left:'ซ้าย',right:'ขวา'};
 const CMD_CLASS={down:'dn',up:'up',left:'lt',right:'rt'};
-const BLOCKED=['water','lava','obstacle'];
+const BLOCKED=['obstacle'];
+
+function isSandLevel(lv){
+  return lv.map.some(row=>row.includes('sand'));
+}
+
+function getCellEmoji(type, lv){
+  if(type==='start' && isSandLevel(lv)) return '😓';
+  return EMOJIS[type]||'';
+}
+
+function shuffleProgItems(){
+  const prog=document.getElementById('prog');
+  const items=Array.from(prog.querySelectorAll('.placed'));
+  if(items.length < 2) return;
+  const shuffled=items.sort(()=>Math.random()-0.5);
+  shuffled.forEach(item=>prog.appendChild(item));
+  updateProg();
+}
+
+function clearProgItems(){
+  document.getElementById('prog').querySelectorAll('.placed').forEach(b=>b.remove());
+  updateProg();
+}
+
+function animateCell(cell, className, label){
+  if(!cell) return;
+  cell.classList.add(className);
+  if(label){
+    const tag=document.createElement('span');
+    tag.className='terrain-fade-text';
+    tag.textContent=label;
+    cell.appendChild(tag);
+    setTimeout(()=>tag.remove(),900);
+  }
+  setTimeout(()=>cell.classList.remove(className),900);
+}
+
+function getNextPos(r,c,dir){
+  const next={r,c};
+  if(dir==='down') next.r++;
+  else if(dir==='up') next.r--;
+  else if(dir==='left') next.c--;
+  else if(dir==='right') next.c++;
+  return next;
+}
 
 let currentLevel=0;
 let pos={r:0,c:0};
@@ -206,17 +251,17 @@ function buildPalette(cmds){
   cmds.forEach(cmd=>{
     if(cmd==='loop'){
       const b=document.createElement('div');
-      b.className='blk lp';b.draggable=true;b.dataset.cmd='loop';
+      b.className='blk lp';b.dataset.cmd='loop';
       b.innerHTML=`🔁 ×<input class="lp-n" id="lpn" type="number" min="1" max="9" value="2" onclick="event.stopPropagation()"> ถัดไป`;
       pal.appendChild(b);
     } else {
       const b=document.createElement('div');
-      b.className=`blk ${CMD_CLASS[cmd]||''}`;b.draggable=true;b.dataset.cmd=cmd;
+      b.className=`blk ${CMD_CLASS[cmd]||''}`;b.dataset.cmd=cmd;
       b.textContent=`${CMD_ICONS[cmd]} ${CMD_LABELS[cmd]}`;
       pal.appendChild(b);
     }
   });
-  setupDrag();
+  setupClickHandlers();
 }
 
 function buildLegend(info){
@@ -241,7 +286,7 @@ function buildGrid(pathCells){
     d.className='cell '+type;
     d.id=`c${r}${c}`;
     if(pathSet.has(r+','+c)&&type!=='start'&&type!=='end') d.classList.add('path-cell');
-    d.textContent=EMOJIS[type]||'';
+    d.textContent=getCellEmoji(type,lv);
     g.appendChild(d);
   }
   drawPlayer();
@@ -258,33 +303,27 @@ function drawPlayer(){
   }
 }
 
-// ==================== DRAG & DROP ====================
-let dragSetupDone = false;
-function setupDrag(){
+// ==================== CLICK TO ADD ====================
+function setupClickHandlers(){
   const pal=document.getElementById('palette');
-  const prog=document.getElementById('prog');
-
-  if(!dragSetupDone){
-    dragSetupDone=true;
-
-    prog.addEventListener('dragover',e=>{e.preventDefault();prog.classList.add('over');});
-    prog.addEventListener('dragleave',()=>prog.classList.remove('over'));
-    prog.addEventListener('drop',e=>{
-      e.preventDefault();prog.classList.remove('over');
-      const d=e.dataTransfer.getData('text');if(d)addBlock(d);
-    });
-  }
-
-  // Remove old dragstart listener and re-add fresh one on palette
+  
+  // Remove old listeners and re-add fresh ones on palette
   const oldPal=pal.cloneNode(true);
   pal.parentNode.replaceChild(oldPal,pal);
   const newPal=document.getElementById('palette');
-  newPal.addEventListener('dragstart',e=>{
-    const b=e.target.closest('[data-cmd]');if(!b)return;
-    if(b.classList.contains('placed')){e.preventDefault();return;}
-    const cmd=b.dataset.cmd;
-    const lpn=newPal.querySelector('#lpn');
-    e.dataTransfer.setData('text',cmd==='loop'?'loop:'+(lpn?lpn.value:2):cmd);
+  
+  // Add click event to all command blocks
+  newPal.querySelectorAll('[data-cmd]').forEach(btn=>{
+    if(!btn.classList.contains('placed')){
+      btn.style.cursor='pointer';
+      btn.addEventListener('click',()=>{
+        if(running)return;
+        const cmd=btn.dataset.cmd;
+        const lpn=newPal.querySelector('#lpn');
+        const data=cmd==='loop'?'loop:'+(lpn?lpn.value:2):cmd;
+        addBlock(data);
+      });
+    }
   });
 }
 
@@ -342,6 +381,50 @@ function calcStars(blockCount, lv){
   return 1;
 }
 
+async function driftOnSand(lv, startPos, visited){
+  const sandCells = [];
+  for (let r = 0; r < lv.size; r++) {
+    for (let c = 0; c < lv.size; c++) {
+      if (lv.map[r][c] === 'sand') sandCells.push({ r, c });
+    }
+  }
+  if (sandCells.length <= 1) return startPos;
+  const currentKey = `${startPos.r},${startPos.c}`;
+  const candidates = sandCells.filter(p => `${p.r},${p.c}` !== currentKey);
+  if (!candidates.length) return startPos;
+
+  const steps = Math.min(candidates.length, 2 + Math.floor(Math.random() * 3));
+  const path = [];
+  const available = candidates.slice();
+  for (let i = 0; i < steps; i++) {
+    const idx = Math.floor(Math.random() * available.length);
+    path.push(available[idx]);
+    available.splice(idx, 1);
+    if (available.length === 0) break;
+  }
+
+  // Show overlay once when the sand-drift begins
+  showEventOverlay('🏜️', 'ทรายร้อนมาก!', 'น้องหมีวิ่งไปทั่วแล้ว', 3000);
+  await delay(300);
+
+  let lastPos = startPos;
+  for (const target of path) {
+    await delay(300);
+    lastPos = { r: target.r, c: target.c };
+    pos = lastPos;
+    // record path for rendering
+    visited.push([target.r, target.c]);
+    buildGrid(visited);
+    const targetEl = document.getElementById(`c${target.r}${target.c}`);
+    animateCell(targetEl, 'sand-hit');
+    // Update small in-UI message for each intermediate position, but do NOT re-open the overlay
+    setMsg(`น้องหมีไปตำแหน่ง ${target.r + 1},${target.c + 1}`,'inf');
+    await delay(450);
+  }
+
+  return lastPos;
+}
+
 // ==================== RUN ====================
 async function runProgram(){
   if(running)return;running=true;
@@ -352,7 +435,7 @@ async function runProgram(){
   buildGrid([]);
 
   const exp=expandProg(program);
-  if(!exp.length){setMsg('ยังไม่มีคำสั่ง ลากบล็อคมาก่อนนะ 🙂','inf');running=false;return;}
+  if(!exp.length){setMsg('ยังไม่มีคำสั่ง จิ้มบล็อคมาก่อนนะ 🙂','inf');running=false;return;}
 
   const visited=[[lv.start[0],lv.start[1]]];
 
@@ -367,13 +450,72 @@ async function runProgram(){
     if(nr<0||nr>=lv.size||nc<0||nc>=lv.size){
       setMsg('ออกนอกแผนที่! 😅 ลองเส้นทางอื่น','err');running=false;return;
     }
-    const cellType=lv.map[nr][nc];
-    if(cellType==='obstacle'){setMsg('ชนกำแพง! 🪨 หลีกเลี่ยงหิน','err');running=false;return;}
-    if(cellType==='water'){setMsg('ตกน้ำ! 💧 น้องหมีว่ายน้ำไม่เป็น','err');running=false;return;}
-    if(cellType==='lava'){setMsg('โดนลาวา! 🔥 ร้อนมาก! เลี่ยงด้วย','err');running=false;return;}
+    let cellType=lv.map[nr][nc];
+    const cellEl=document.getElementById(`c${nr}${nc}`);
+    if(cellType==='obstacle'){
+      animateCell(cellEl,'lava-hit','');
+      setMsg('ชนกำแพง! 🪨 หลีกเลี่ยงกำแพง!','err');running=false;return;
+    }
 
     pos={r:nr,c:nc};
     visited.push([nr,nc]);
+
+    if(cellType==='ice'){
+      const slide=getNextPos(nr,nc,s.cmd);
+      if(slide.r<0||slide.r>=lv.size||slide.c<0||slide.c>=lv.size){
+        setMsg('ลื่นตกขอบ! 🧊','err');running=false;return;
+      }
+      const slideType=lv.map[slide.r][slide.c];
+      const slideEl=document.getElementById(`c${slide.r}${slide.c}`);
+      if(slideType==='obstacle'){
+        animateCell(slideEl,'lava-hit');
+        clearProgItems();
+        showEventOverlay('😵‍💫','ลื่นชนกำแพง! 🪨','น้องหมีลื่นชนกำแพง ขิต!', 2500);
+        setMsg('ลื่นชนกำแพง! 🪨','err');running=false;return;
+      }
+      if(slideType==='water'){
+        animateCell(slideEl,'water-hit');
+        shuffleProgItems();
+        showEventOverlay('💧','ตกน้ำ!','น้องหมีจมน้ำแล้ว เบลอมากเดินมั่วแล้ว!', 2500);
+        setMsg('ตกน้ำ! 💧 น้องหมีจมน้ำแล้ว','err');running=false;return;
+      }
+      if(slideType==='lava'){
+        animateCell(slideEl,'lava-hit','ขิต');
+        clearProgItems();
+        showEventOverlay('🔥','โดนลาวา!','น้องหมีถูกลาวาทำร้าย ขิต!',3000);
+        setMsg('โดนลาวา! 🔥 ขิต','err');running=false;return;
+      }
+      if(slideType==='sand'){
+        animateCell(slideEl,'sand-hit');
+        shuffleProgItems();
+        setMsg('ทรายร้อนมาก! น้องหมีวิ่งไปทั่วแล้ว','err');
+        pos = await driftOnSand(lv,pos,visited);
+      }
+      nr=slide.r; nc=slide.c; cellType=slideType;
+      pos={r:nr,c:nc};
+      visited.push([nr,nc]);
+    }
+
+    if(cellType==='water'){
+      animateCell(cellEl,'water-hit');
+      shuffleProgItems();
+      showEventOverlay('💧','ตกน้ำ!','น้องหมีจมน้ำแล้ว เบลอมากเดินมั่วแล้ว!', 2500);
+      setMsg('ตกน้ำ! 💧 น้องหมีจมน้ำแล้ว','err');running=false;return;
+
+    }
+    if(cellType==='sand'){
+      animateCell(cellEl,'sand-hit');
+      shuffleProgItems();
+      setMsg('ทรายร้อนมาก! น้องหมีวิ่งไปทั่วแล้ว','err');
+      pos = await driftOnSand(lv,pos,visited);
+    }
+    if(cellType==='lava'){
+      animateCell(cellEl,'lava-hit','ขิต');
+      clearProgItems();
+      showEventOverlay('🔥','โดนลาวา!','น้องหมีถูกลาวาทำร้าย ขิต!',3000);
+      setMsg('โดนลาวา! 🔥 ขิต','err');running=false;return;
+    }
+
     buildGrid(visited);
   }
 
@@ -447,8 +589,29 @@ function setMsg(t,tp){
   e.textContent=t;
 }
 
+let eventOverlayTimer=null;
+function showEventOverlay(emoji,title,text,duration=0){
+  const overlay=document.getElementById('event-overlay');
+  if(!overlay) return;
+  document.getElementById('event-emoji').textContent=emoji;
+  document.getElementById('event-title').textContent=title;
+  document.getElementById('event-text').textContent=text;
+  overlay.classList.add('show');
+  if(eventOverlayTimer){clearTimeout(eventOverlayTimer);eventOverlayTimer=null;}
+  if(duration>0){
+    eventOverlayTimer=setTimeout(()=>closeEventOverlay(),duration);
+  }
+}
+
+function closeEventOverlay(){
+  const overlay=document.getElementById('event-overlay');
+  if(!overlay) return;
+  overlay.classList.remove('show');
+  if(eventOverlayTimer){clearTimeout(eventOverlayTimer);eventOverlayTimer=null;}
+}
+
 function delay(ms){return new Promise(res=>setTimeout(res,ms));}
 
 // ==================== INIT ====================
-setupDrag();
+setupClickHandlers();
 loadLevel(0);

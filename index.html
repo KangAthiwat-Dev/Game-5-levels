@@ -45,7 +45,7 @@
 
     <div class="prog-label">โปรแกรม</div>
     <div class="prog" id="prog">
-      <div class="flag-blk">🚩</div>
+      <!-- <div class="flag-blk">🚩</div> -->
       <div class="hint" id="hint">ลากบล็อคคำสั่งมาวางที่นี่</div>
     </div>
 
@@ -74,6 +74,16 @@
     <div id="win-stars" style="font-size:28px;margin-bottom:16px">⭐⭐⭐</div>
     <button class="win-next" id="win-next-btn" onclick="nextLevel()">ด่านถัดไป ➡</button>
     <button class="win-close" onclick="closeWin()">เล่นอีกครั้ง</button>
+  </div>
+</div>
+
+<!-- Event overlay -->
+<div class="event-overlay" id="event-overlay">
+  <div class="event-box">
+    <span class="event-emoji" id="event-emoji">💧</span>
+    <h2 id="event-title">จมน้ำ!</h2>
+    <p id="event-text">น้องหมีจมน้ำแล้ว ลองใหม่อีกครั้ง</p>
+    <!-- <button class="event-close" onclick="closeEventOverlay()">ปิด</button> -->
   </div>
 </div>
 
