@@ -245,23 +245,59 @@ function loadLevel(idx){
   buildLevelTabs();
 }
 
-function buildPalette(cmds){
-  const pal=document.getElementById('palette');
-  pal.innerHTML='<div class="palette-label">บล็อคคำสั่ง</div>';
-  cmds.forEach(cmd=>{
-    if(cmd==='loop'){
-      const b=document.createElement('div');
-      b.className='blk lp';b.dataset.cmd='loop';
-      b.innerHTML=`🔁 ×<input class="lp-n" id="lpn" type="number" min="1" max="9" value="2" onclick="event.stopPropagation()"> ถัดไป`;
-      pal.appendChild(b);
-    } else {
-      const b=document.createElement('div');
-      b.className=`blk ${CMD_CLASS[cmd]||''}`;b.dataset.cmd=cmd;
-      b.textContent=`${CMD_ICONS[cmd]} ${CMD_LABELS[cmd]}`;
-      pal.appendChild(b);
-    }
+function buildPalette(cmds) {
+  // ---- LEFT: multiplier items ----
+  const multPanel = document.getElementById('multiplier-panel');
+  multPanel.innerHTML = '';
+
+  if (cmds.includes('loop')) {
+    // สร้าง multiplier item สำหรับ loop (ขยายได้ถ้ามีหลาย type)
+    const item = document.createElement('div');
+    item.className = 'mult-item';
+    item.innerHTML = `
+        <div class="mult-btns">
+            <button class="mult-btn" id="lpn-minus">−</button>
+                <div class="mult-val" id="lpn-val">2</div>
+            <button class="mult-btn" id="lpn-plus">+</button>
+      </div>
+      <button class="blk lp" style="margin-top:4px;cursor:pointer" id="loop-add-btn">+ เพิ่ม</button>
+    `;
+    multPanel.appendChild(item);
+
+    let lpnVal = 2;
+    const valEl = item.querySelector('#lpn-val');
+    item.querySelector('#lpn-minus').onclick = () => {
+      if (lpnVal > 1) { lpnVal--; valEl.textContent = lpnVal; }
+    };
+    item.querySelector('#lpn-plus').onclick = () => {
+      if (lpnVal < 9) { lpnVal++; valEl.textContent = lpnVal; }
+    };
+    item.querySelector('#loop-add-btn').onclick = () => {
+      if (!running) addBlock('loop:' + lpnVal);
+    };
+  } else {
+    multPanel.innerHTML = '<div style="font-size:11px;color:var(--text-dim)">ไม่มีคำสั่งคูณในด่านนี้</div>';
+  }
+
+  // ---- RIGHT: joystick ----
+  const pal = document.getElementById('palette');
+  pal.innerHTML = '';
+
+  const dirCmds = ['up', 'down', 'left', 'right'];
+  dirCmds.forEach(cmd => {
+    if (!cmds.includes(cmd)) return;
+    const btn = document.createElement('button');
+    btn.className = `joy-btn ${cmd}`;
+    btn.textContent = CMD_ICONS[cmd];
+    btn.title = CMD_LABELS[cmd];
+    btn.onclick = () => { if (!running) addBlock(cmd); };
+    pal.appendChild(btn);
   });
-  setupClickHandlers();
+
+  // เติม placeholder ตรงกลาง ถ้าครบ 4 ทิศ
+  if (cmds.includes('up') && cmds.includes('down') && cmds.includes('left') && cmds.includes('right')) {
+    // grid-area center — ไม่ต้องทำอะไร เพราะ CSS จัดเองแล้ว
+  }
 }
 
 function buildLegend(info){
@@ -418,7 +454,7 @@ async function driftOnSand(lv, startPos, visited){
     const targetEl = document.getElementById(`c${target.r}${target.c}`);
     animateCell(targetEl, 'sand-hit');
     // Update small in-UI message for each intermediate position, but do NOT re-open the overlay
-    setMsg(`น้องหมีร้อนตีนเท้า วิ่งมั่วแล้ว`);
+    setMsg(`น้องหมีร้อนตีนเท้า วิ่งมั่วแล้ว`, 'inf');
     await delay(450);
   }
 

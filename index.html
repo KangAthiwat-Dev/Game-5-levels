@@ -45,17 +45,23 @@
 
     <div class="prog-label">โปรแกรม</div>
     <div class="prog" id="prog">
-      <!-- <div class="flag-blk">🚩</div> -->
-      <div class="hint" id="hint">ลากบล็อคคำสั่งมาวางที่นี่</div>
+      <div class="hint" id="hint">คำสั่ง</div>
     </div>
 
-    <div class="palette" id="palette">
-      <div class="palette-label">บล็อคคำสั่ง</div>
+    <div class="command-panel">
+      <div class="command-left">
+        <div class="palette-label">คำสั่งคูณรอบ</div>
+        <div class="multiplier-panel" id="multiplier-panel"></div>
+        <button class="rst" onclick="resetGame()">↺ เริ่มใหม่</button>
+      </div>
+      <div class="command-right">
+        <div class="palette-label">คำสั่งทิศทาง</div>
+        <div class="joystick-panel" id="palette"></div>
+      </div>
     </div>
 
     <div class="btn-row">
-      <button class="rst" onclick="resetGame()">↺ เริ่มใหม่</button>
-      <button class="run" onclick="runProgram()">▶ รัน!</button>
+      <button class="run" onclick="runProgram()">▶ เริ่มเลย!</button>
 
     </div>
 
