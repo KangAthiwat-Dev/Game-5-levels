@@ -81,7 +81,11 @@ body{
 }
 
 /* Grid */
-.grid-wrap{display:flex;flex-direction:column;gap:8px}
+.grid-wrap{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
 .level-badge{
   display:flex;align-items:center;gap:8px;
   padding:7px 12px;
@@ -124,7 +128,11 @@ body{
 
 /* ==== */
 .legend{
-  display:flex;gap:8px;flex-wrap:wrap;
+  display:flex;
+  justify-content: center;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
   font-size:11px;color:var(--text-dim);
   padding:6px 8px;background:var(--surface);border-radius:var(--radius);
 }
@@ -437,8 +445,8 @@ body{
     ". up ."
     "left . right"
     ". down .";
-  grid-template-columns: repeat(3, 30px);
-  grid-template-rows: repeat(3, 30px);
+  grid-template-columns: repeat(3, 50px);
+  grid-template-rows: repeat(3, 40px);
   gap: 2px;
   background: transparent;
 }
