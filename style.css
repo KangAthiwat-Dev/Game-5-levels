@@ -96,6 +96,11 @@ body{
 .grid{
   display:grid;
   gap:3px;
+  /* width:min(360px,100%);
+  height:min(360px,100%);
+  aspect-ratio:1;
+  max-width:360px;
+  max-height:360px; */
 }
 .cell{
   width:60px;height:60px;

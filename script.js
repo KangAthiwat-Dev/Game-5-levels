@@ -120,7 +120,7 @@ const LEVELS = [
 
 // ==================== GAME STATE ====================
 const EMOJIS={start:'🐻',end:'🎁',obstacle:'🪨',water:'💧',grass:'',ice:'🧊',sand:'🏝️',lava:'🔥'};
-const CMD_ICONS={down:'⬇',up:'⬆',left:'⬅',right:'➡'};
+const CMD_ICONS={down:'↓',up:'↑',left:'←',right:'→'};
 const CMD_LABELS={down:'ลง',up:'ขึ้น',left:'ซ้าย',right:'ขวา'};
 const CMD_CLASS={down:'dn',up:'up',left:'lt',right:'rt'};
 const BLOCKED=['obstacle'];
@@ -130,7 +130,7 @@ function isSandLevel(lv){
 }
 
 function getCellEmoji(type, lv){
-  if(type==='start' && isSandLevel(lv)) return '😓';
+  if(type==='start' && isSandLevel(lv)) return '🥵';
   return EMOJIS[type]||'';
 }
 
@@ -418,7 +418,7 @@ async function driftOnSand(lv, startPos, visited){
     const targetEl = document.getElementById(`c${target.r}${target.c}`);
     animateCell(targetEl, 'sand-hit');
     // Update small in-UI message for each intermediate position, but do NOT re-open the overlay
-    setMsg(`น้องหมีไปตำแหน่ง ${target.r + 1},${target.c + 1}`,'inf');
+    setMsg(`น้องหมีร้อนตีนเท้า วิ่งมั่วแล้ว`);
     await delay(450);
   }
 
@@ -551,7 +551,7 @@ function onLevelComplete(stars,steps,blockCount){
   const nextBtn=document.getElementById('win-next-btn');
   if(currentLevel<LEVELS.length-1){
     nextBtn.style.display='';
-    nextBtn.textContent=`ด่านที่ ${currentLevel+2} ➡`;
+    nextBtn.textContent=`ด่านที่ ${currentLevel+2} →`;
   } else {
     nextBtn.style.display='none';
   }
